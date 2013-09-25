@@ -44,7 +44,7 @@ set_pixel(X, Y, Color) ->
 		    Data band (bnot Bit)
 	    end,
     ra8835:set_cursor(Addr),
-    ra8835:mwrite([Data1], 1).
+    ra8835:mwrite([Data1]).
 
 horizontal_line(X1, X2, Y, Color) ->
     foreach(fun(X) -> set_pixel(X, Y, Color) end, lists:seq(X1, X2)).
