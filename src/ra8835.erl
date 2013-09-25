@@ -53,40 +53,15 @@
 -define(RA8835_CMD_MWRITE,      16#42).  %% Write to display memory -
 -define(RA8835_CMD_MREAD,       16#43).  %% Read from display memory - 
 
-%% -define(LCD_RW_PIN,  5).
-%% -define(LCD_E_PIN,   6).
-
--define(LCD_A0_PIN,  4).   %% LCD_RS_PIN
-%% -define(LCD_RS_PIN,  4).
--define(LCD_WR_PIN,  5).
--define(LCD_RD_PIN,  6).
-
--define(LCD_CS_PIN,     19).
-%% LCD_68_80_PIN should/could be connected to VDD or VSS!
--define(LCD_68_80_PIN,  20).  %% may be constant!
--define(LCD_RST_PIN,    22).
-
--define(DB0_PIN, 9).
--define(DB1_PIN, 10).
--define(DB2_PIN, 11).
--define(DB3_PIN, 12).
--define(DB4_PIN, 13).
--define(DB5_PIN, 15).
--define(DB6_PIN, 17).
--define(DB7_PIN, 18).
+-include("../include/ra8835_cfg.hrl").
 
 -define(P0(I), ((1 bsl (I)))).
 
--define(LCD_A0,    ?P0(?LCD_A0_PIN)).       %%/ Command/Data select
-%% -define(LCD_RW,    ?P0(?LCD_RW_PIN)).       %% Read/Write select (6800 style)
-%% -define(LCD_E,     ?P0(?LCD_E_PIN)).       %% Enable  ( 6800 style)
-
-%% -define(LCD_RS,   ?P0(?LCD_RS_PIN)).        %%  C/D | D/I | A0... 
+-define(LCD_A0,   ?P0(?LCD_A0_PIN)).       %%/ Command/Data select
 -define(LCD_WR,   ?P0(?LCD_WR_PIN)).        %%  WR = RW (8080 style)
 -define(LCD_RD,   ?P0(?LCD_RD_PIN)).        %% RD = E  (8080 style)
 
 -define(LCD_CS,     ?P0(?LCD_CS_PIN)).      %% Chip select
--define(LCD_68_80,  ?P0(?LCD_68_80_PIN)).   %% signaling style
 -define(LCD_RST,    ?P0(?LCD_RST_PIB)).     %% Reset pin
 
 -define(DB0,  ?P0(?DB0_PIN)).
@@ -119,7 +94,7 @@ make_byte_to_db() ->
 	   (if I band 16#40 =:= 0 -> 0; true -> ?DB6 end) +
 	   (if I band 16#80 =:= 0 -> 0; true -> ?DB7 end) 
 	   || I <- lists:seq(0, 255)],
-    io:format("byte_to_db() -> \n{ 16#~8.16.0B", [hd(Db)]),
+    io:format("byte_to_db_tab() -> \n{ 16#~8.16.0B", [hd(Db)]),
     foreach(fun(D) -> io:format(",16#~8.16.0B", [D]) end, tl(Db)),
     io:format("}.\n").
 
@@ -134,11 +109,16 @@ db_to_byte(X) ->
     (if X band ?DB6 =:= 0 -> 0; true -> 16#40 end) + 
     (if X band ?DB7 =:= 0 -> 0; true -> 16#80 end).
 
-set_dbx_input() ->
-    gpio:set_input_mask(0, ?DB_MASK).
+dbx_direction(D) ->
+    gpio:set_direction(?DB0_PIN, D),
+    gpio:set_direction(?DB1_PIN, D),
+    gpio:set_direction(?DB2_PIN, D),
+    gpio:set_direction(?DB3_PIN, D),
+    gpio:set_direction(?DB4_PIN, D),
+    gpio:set_direction(?DB5_PIN, D),
+    gpio:set_direction(?DB6_PIN, D),
+    gpio:set_direction(?DB7_PIN, D).
 
-set_dbx_output() ->
-    gpio:set_output_mask(0, ?DB_MASK).
 
 write_dbx(Db) ->
     gpio:clr_mask(0, ?DB_MASK),
@@ -148,28 +128,28 @@ read_dbx() ->
     db_to_byte(gpio:get_mask(0)).
 
 status() ->
-    gpio:set_input_mask(0, ?DB6), 
-    gpio:clr_mask(0, ?LCD_A0),
-    gpio:clr_mask(0, ?LCD_CS),
+    gpio:set_direction(?DB6_PIN, in),
+    gpio:clr(?LCD_A0_PIN),
+    gpio:clr(?LCD_CS_PIN),
     %% T16ns;
-    gpio:clr_mask(0, ?LCD_RD), %% At least later than CS&A0
+    gpio:clr(?LCD_RD_PIN), %% At least later than CS&A0
     ?TCC_DELAY(), %% Strobe pulse delay
-    Res = (gpio:get_mask(0) band ?DB6) =/= 0,
-    gpio:set_mask(0, ?LCD_RD),
-    gpio:set_mask(0, ?LCD_CS),
-    gpio:set_mask(0, ?LCD_A0),
-    gpio:set_output_mask(0, ?DB6), 
+    Res = gpio:get(?DB6_PIN) =/= 0,
+    gpio:set(?LCD_RD_PIN),
+    gpio:set(?LCD_CS_PIN),
+    gpio:set(?LCD_A0_PIN),
+    gpio:set_direction(?DB6_PIN, out), 
     Res.
 
 sync_data() ->
-    gpio:clr_mask(0, ?LCD_A0),
-    gpio:clr_mask(0, ?LCD_CS),
+    gpio:clr(?LCD_A0_PIN),
+    gpio:clr(?LCD_CS_PIN),
     %% T16ns;
-    gpio:clr_mask(0, ?LCD_WR),   %% At least later than CS&A0
+    gpio:clr(?LCD_WR_PIN),   %% At least later than CS&A0
     ?TCC_DELAY(),  %% Strobe pulse delay
-    gpio:set_mask(0, ?LCD_WR),
-    gpio:set_mask(0, ?LCD_CS),
-    gpio:set_mask(0, ?LCD_A0),
+    gpio:set(?LCD_WR_PIN),
+    gpio:set(?LCD_CS_PIN),
+    gpio:set(?LCD_A0_PIN),
     ?WRITE_DELAY().
 
 write_byte(Data) ->
@@ -178,32 +158,63 @@ write_byte(Data) ->
 
 instruction(I) ->
     write_dbx(I),
-    gpio:clr_mask(0, ?LCD_CS),
+    gpio:clr(?LCD_CS_PIN),
     %% T16ns;
-    gpio:clr_mask(0, ?LCD_WR),  %% At least later than CS&A0
+    gpio:clr(?LCD_WR_PIN),  %% At least later than CS&A0
     ?TCC_DELAY(), %% T16ns;  // Strobe pulse delay
-    gpio:set_mask(0, ?LCD_WR),
-    gpio:set_mask(0, ?LCD_CS),
+    gpio:set(?LCD_WR_PIN),
+    gpio:set(?LCD_CS_PIN),
     ?COMMAND_DELAY().
 
 read_byte() ->
-    gpio:clr_mask(0, ?LCD_CS),
+    gpio:clr(?LCD_CS_PIN),
     %% T16ns;
-    gpio:clr_mask(0, ?LCD_RD), %% At least later than CS&A0
+    gpio:clr(?LCD_RD_PIN), %% At least later than CS&A0
     ?TCC_DELAY(), %% Strobe pulse delay
     Data = read_dbx(),
-    gpio:set_mask(0, ?LCD_RD),
+    gpio:set(?LCD_RD_PIN),
     %% T16ns;
-    gpio:set_mask(0, ?LCD_CS),
+    gpio:set(?LCD_CS_PIN),
     ?READ_DELAY(), %% Output disable time
     Data.
 
-init() ->
-    gpio:clr_mask(?DB_MASK),  %% Clear data pins
-    set_dbx_output(),     %% Default to output on data pins
+%% LCD_68_80=0, (=8080) Then set output direction
+%% if pin is not defined then the pin should have been wired to ground!
+-ifdef(LCD_68_80_PIN).
+init_68_80_pin() ->
+    gpio:init_direct(?LCD_CS_PIN).
+set_8080_mode() ->
+    gpio:set_direction(?LCD_68_80_PIN, low).
+-else.
+init_68_80_pin() ->
+    ok.
+set_8080_mode() ->
+    ok.
+-endif.
 
-    %% LCD_68_80=0, (=8080) Then set output direction
-    gpio:set_direction(?LCD_68_80_PIN, low),  
+init() ->
+    gpio_sup:start_link([{linked,false},{debug,true},{chipset,bcm2835}]),
+    gpio:init_direct(?LCD_A0_PIN),
+    gpio:init_direct(?LCD_WR_PIN),
+    gpio:init_direct(?LCD_RD_PIN),
+
+    init_68_80_pin(),
+			 
+    gpio:init_direct(?LCD_CS_PIN),
+    gpio:init_direct(?LCD_RST_PIN),
+
+    gpio:init_direct(?DB0_PIN),
+    gpio:init_direct(?DB1_PIN),
+    gpio:init_direct(?DB2_PIN),
+    gpio:init_direct(?DB3_PIN),
+    gpio:init_direct(?DB4_PIN),
+    gpio:init_direct(?DB5_PIN),
+    gpio:init_direct(?DB6_PIN),
+    gpio:init_direct(?DB7_PIN),
+
+    dbx_direction(low),    %% init low output
+
+    set_8080_mode(),  %% 8080 signaling mode only 
 
     %% Set default output values
     gpio:set_direction(?LCD_RD_PIN,  high),
@@ -299,10 +310,10 @@ set_cursor(Addr) ->
 
 get_cursor() ->
     instruction(?RA8835_CMD_CSRR),
-    set_dbx_input(),
+    dbx_direction(in),
     Addr0 = read_byte(),
     Addr = (read_byte() bsl 8) bor Addr0,
-    set_dbx_output(),
+    dbx_direction(out),
     Addr.
 
 mwrite(Src) ->
@@ -311,9 +322,9 @@ mwrite(Src) ->
 
 mread(Len) ->
     instruction(?RA8835_CMD_MREAD),
-    set_dbx_input(),
+    dbx_direction(in),
     Data = [ read_byte() || _ <- lists:seq(1, Len)],
-    set_dbx_output(),
+    dbx_direction(out),
     Data.
 
 mfill(Data, Len) ->
@@ -331,6 +342,7 @@ mfill(Data, Len) ->
 %% generate when needed (with make_byte_to_db() )
 %%
 byte_to_db(X) ->
-    element((X band 16#ff)+1,
-{ 16#00000000,16#00000200,16#00000400,16#00000600,16#00000800,16#00000A00,16#00000C00,16#00000E00,16#00001000,16#00001200,16#00001400,16#00001600,16#00001800,16#00001A00,16#00001C00,16#00001E00,16#00002000,16#00002200,16#00002400,16#00002600,16#00002800,16#00002A00,16#00002C00,16#00002E00,16#00003000,16#00003200,16#00003400,16#00003600,16#00003800,16#00003A00,16#00003C00,16#00003E00,16#00008000,16#00008200,16#00008400,16#00008600,16#00008800,16#00008A00,16#00008C00,16#00008E00,16#00009000,16#00009200,16#00009400,16#00009600,16#00009800,16#00009A00,16#00009C00,16#00009E00,16#0000A000,16#0000A200,16#0000A400,16#0000A600,16#0000A800,16#0000AA00,16#0000AC00,16#0000AE00,16#0000B000,16#0000B200,16#0000B400,16#0000B600,16#0000B800,16#0000BA00,16#0000BC00,16#0000BE00,16#00020000,16#00020200,16#00020400,16#00020600,16#00020800,16#00020A00,16#00020C00,16#00020E00,16#00021000,16#00021200,16#00021400,16#00021600,16#00021800,16#00021A00,16#00021C00,16#00021E00,16#00022000,16#00022200,16#00022400,16#00022600,16#00022800,16#00022A00,16#00022C00,16#00022E00,16#00023000,16#00023200,16#00023400,16#00023600,16#00023800,16#00023A00,16#00023C00,16#00023E00,16#00028000,16#00028200,16#00028400,16#00028600,16#00028800,16#00028A00,16#00028C00,16#00028E00,16#00029000,16#00029200,16#00029400,16#00029600,16#00029800,16#00029A00,16#00029C00,16#00029E00,16#0002A000,16#0002A200,16#0002A400,16#0002A600,16#0002A800,16#0002AA00,16#0002AC00,16#0002AE00,16#0002B000,16#0002B200,16#0002B400,16#0002B600,16#0002B800,16#0002BA00,16#0002BC00,16#0002BE00,16#00040000,16#00040200,16#00040400,16#00040600,16#00040800,16#00040A00,16#00040C00,16#00040E00,16#00041000,16#00041200,16#00041400,16#00041600,16#00041800,16#00041A00,16#00041C00,16#00041E00,16#00042000,16#00042200,16#00042400,16#00042600,16#00042800,16#00042A00,16#00042C00,16#00042E00,16#00043000,16#00043200,16#00043400,16#00043600,16#00043800,16#00043A00,16#00043C00,16#00043E00,16#00048000,16#00048200,16#00048400,16#00048600,16#00048800,16#00048A00,16#00048C00,16#00048E00,16#00049000,16#00049200,16#00049400,16#00049600,16#00049800,16#00049A00,16#00049C00,16#00049E00,16#0004A000,16#0004A200,16#0004A400,16#0004A600,16#0004A800,16#0004AA00,16#0004AC00,16#0004AE00,16#0004B000,16#0004B200,16#0004B400,16#0004B600,16#0004B800,16#0004BA00,16#0004BC00,16#0004BE00,16#00060000,16#00060200,16#00060400,16#00060600,16#00060800,16#00060A00,16#00060C00,16#00060E00,16#00061000,16#00061200,16#00061400,16#00061600,16#00061800,16#00061A00,16#00061C00,16#00061E00,16#00062000,16#00062200,16#00062400,16#00062600,16#00062800,16#00062A00,16#00062C00,16#00062E00,16#00063000,16#00063200,16#00063400,16#00063600,16#00063800,16#00063A00,16#00063C00,16#00063E00,16#00068000,16#00068200,16#00068400,16#00068600,16#00068800,16#00068A00,16#00068C00,16#00068E00,16#00069000,16#00069200,16#00069400,16#00069600,16#00069800,16#00069A00,16#00069C00,16#00069E00,16#0006A000,16#0006A200,16#0006A400,16#0006A600,16#0006A800,16#0006AA00,16#0006AC00,16#0006AE00,16#0006B000,16#0006B200,16#0006B400,16#0006B600,16#0006B800,16#0006BA00,16#0006BC00,16#0006BE00}).
+    element((X band 16#ff)+1, byte_to_db_tab()).
 
+byte_to_db_tab() -> 
+{ 16#00000000,16#00000080,16#00000100,16#00000180,16#00000200,16#00000280,16#00000300,16#00000380,16#00000400,16#00000480,16#00000500,16#00000580,16#00000600,16#00000680,16#00000700,16#00000780,16#00000800,16#00000880,16#00000900,16#00000980,16#00000A00,16#00000A80,16#00000B00,16#00000B80,16#00000C00,16#00000C80,16#00000D00,16#00000D80,16#00000E00,16#00000E80,16#00000F00,16#00000F80,16#00400000,16#00400080,16#00400100,16#00400180,16#00400200,16#00400280,16#00400300,16#00400380,16#00400400,16#00400480,16#00400500,16#00400580,16#00400600,16#00400680,16#00400700,16#00400780,16#00400800,16#00400880,16#00400900,16#00400980,16#00400A00,16#00400A80,16#00400B00,16#00400B80,16#00400C00,16#00400C80,16#00400D00,16#00400D80,16#00400E00,16#00400E80,16#00400F00,16#00400F80,16#00800000,16#00800080,16#00800100,16#00800180,16#00800200,16#00800280,16#00800300,16#00800380,16#00800400,16#00800480,16#00800500,16#00800580,16#00800600,16#00800680,16#00800700,16#00800780,16#00800800,16#00800880,16#00800900,16#00800980,16#00800A00,16#00800A80,16#00800B00,16#00800B80,16#00800C00,16#00800C80,16#00800D00,16#00800D80,16#00800E00,16#00800E80,16#00800F00,16#00800F80,16#00C00000,16#00C00080,16#00C00100,16#00C00180,16#00C00200,16#00C00280,16#00C00300,16#00C00380,16#00C00400,16#00C00480,16#00C00500,16#00C00580,16#00C00600,16#00C00680,16#00C00700,16#00C00780,16#00C00800,16#00C00880,16#00C00900,16#00C00980,16#00C00A00,16#00C00A80,16#00C00B00,16#00C00B80,16#00C00C00,16#00C00C80,16#00C00D00,16#00C00D80,16#00C00E00,16#00C00E80,16#00C00F00,16#00C00F80,16#01000000,16#01000080,16#01000100,16#01000180,16#01000200,16#01000280,16#01000300,16#01000380,16#01000400,16#01000480,16#01000500,16#01000580,16#01000600,16#01000680,16#01000700,16#01000780,16#01000800,16#01000880,16#01000900,16#01000980,16#01000A00,16#01000A80,16#01000B00,16#01000B80,16#01000C00,16#01000C80,16#01000D00,16#01000D80,16#01000E00,16#01000E80,16#01000F00,16#01000F80,16#01400000,16#01400080,16#01400100,16#01400180,16#01400200,16#01400280,16#01400300,16#01400380,16#01400400,16#01400480,16#01400500,16#01400580,16#01400600,16#01400680,16#01400700,16#01400780,16#01400800,16#01400880,16#01400900,16#01400980,16#01400A00,16#01400A80,16#01400B00,16#01400B80,16#01400C00,16#01400C80,16#01400D00,16#01400D80,16#01400E00,16#01400E80,16#01400F00,16#01400F80,16#01800000,16#01800080,16#01800100,16#01800180,16#01800200,16#01800280,16#01800300,16#01800380,16#01800400,16#01800480,16#01800500,16#01800580,16#01800600,16#01800680,16#01800700,16#01800780,16#01800800,16#01800880,16#01800900,16#01800980,16#01800A00,16#01800A80,16#01800B00,16#01800B80,16#01800C00,16#01800C80,16#01800D00,16#01800D80,16#01800E00,16#01800E80,16#01800F00,16#01800F80,16#01C00000,16#01C00080,16#01C00100,16#01C00180,16#01C00200,16#01C00280,16#01C00300,16#01C00380,16#01C00400,16#01C00480,16#01C00500,16#01C00580,16#01C00600,16#01C00680,16#01C00700,16#01C00780,16#01C00800,16#01C00880,16#01C00900,16#01C00980,16#01C00A00,16#01C00A80,16#01C00B00,16#01C00B80,16#01C00C00,16#01C00C80,16#01C00D00,16#01C00D80,16#01C00E00,16#01C00E80,16#01C00F00,16#01C00F80}.
