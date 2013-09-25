@@ -19,6 +19,6 @@ loop(0) ->
 loop(I) ->
     X = random:uniform(240)-1,
     Y = random:uniform(128)-1,
-    ra8835:set_pixel(X, Y, 1),
+    ra8835_display:set_pixel(X, Y, 1),
     timer:sleep(100),
     loop(I-1).
