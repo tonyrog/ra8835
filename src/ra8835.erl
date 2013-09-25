@@ -193,7 +193,7 @@ set_8080_mode() ->
 -endif.
 
 init() ->
-    gpio_sup:start_link([{linked,false},{debug,true},{chipset,bcm2835}]),
+    gpio_sup:start_link([linked,{chipset,bcm2835}]),
     gpio:init_direct(?LCD_A0_PIN),
     gpio:init_direct(?LCD_WR_PIN),
     gpio:init_direct(?LCD_RD_PIN),
