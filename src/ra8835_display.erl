@@ -15,6 +15,7 @@
 
 -export([memset/3,
 	 set_pixel/3, 
+	 get_pixel/2, 
 	 horizontal_line/4, 
 	 vertical_line/4,
 	 goto_xy/2,
@@ -33,11 +34,18 @@ memset(Addr, Data, Len) ->
     ra8835:set_cursor(Addr),
     ra8835:mfill(Data, Len).
 
+get_pixel(X, Y) ->
+    Addr = ?pixel_addr(X,Y),
+    ra8835:set_cursor(Addr),
+    [Data] = ra8835:mread(1),
+    Bit = (1 bsl (7 - (X band 16#7))),
+    (Data band Bit) =/= 0.
+
 set_pixel(X, Y, Color) ->
     Addr = ?pixel_addr(X,Y),
     ra8835:set_cursor(Addr),
     [Data] = ra8835:mread(1),
-    Bit = (1 bsl (7 - (X band 16#f))),
+    Bit = (1 bsl (7 - (X band 16#7))),
     Data1 = if Color =/= 0 ->
 		    Data bor Bit;
 	       true ->
