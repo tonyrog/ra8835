@@ -332,7 +332,7 @@ mfill(Data, Len) ->
     if Len > 0 ->
 	    write_byte(Data),
 	    %% Sync dame data over agin
-	    foreach(fun(_) -> sync_data() end, list:seq(1, Len-1));
+	    foreach(fun(_) -> sync_data() end, lists:seq(1, Len-1));
        true ->
 	    ok
     end.
