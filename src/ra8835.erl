@@ -182,7 +182,7 @@ read_byte() ->
 %% if pin is not defined then the pin should have been wired to ground!
 -ifdef(LCD_68_80_PIN).
 init_68_80_pin() ->
-    gpio:init_direct(?LCD_CS_PIN).
+    gpio:init(?LCD_CS_PIN).
 set_8080_mode() ->
     gpio:set_direction(?LCD_68_80_PIN, low).
 -else.
@@ -193,24 +193,24 @@ set_8080_mode() ->
 -endif.
 
 init() ->
-    gpio_sup:start_link([linked,{chipset,bcm2835}]),
-    gpio:init_direct(?LCD_A0_PIN),
-    gpio:init_direct(?LCD_WR_PIN),
-    gpio:init_direct(?LCD_RD_PIN),
+    application:start(gpio),
+    gpio:init(?LCD_A0_PIN),
+    gpio:init(?LCD_WR_PIN),
+    gpio:init(?LCD_RD_PIN),
 
     init_68_80_pin(),
 			 
-    gpio:init_direct(?LCD_CS_PIN),
-    gpio:init_direct(?LCD_RST_PIN),
+    gpio:init(?LCD_CS_PIN),
+    gpio:init(?LCD_RST_PIN),
 
-    gpio:init_direct(?DB0_PIN),
-    gpio:init_direct(?DB1_PIN),
-    gpio:init_direct(?DB2_PIN),
-    gpio:init_direct(?DB3_PIN),
-    gpio:init_direct(?DB4_PIN),
-    gpio:init_direct(?DB5_PIN),
-    gpio:init_direct(?DB6_PIN),
-    gpio:init_direct(?DB7_PIN),
+    gpio:init(?DB0_PIN),
+    gpio:init(?DB1_PIN),
+    gpio:init(?DB2_PIN),
+    gpio:init(?DB3_PIN),
+    gpio:init(?DB4_PIN),
+    gpio:init(?DB5_PIN),
+    gpio:init(?DB6_PIN),
+    gpio:init(?DB7_PIN),
 
     dbx_direction(low),    %% init low output
 
