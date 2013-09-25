@@ -1,0 +1,6 @@
+{application, ra8835,
+ [{description, "RA8835 display controller card"},
+  {vsn, git},
+  {env, []},
+  {applications,[kernel,stdlib]}
+  ]}.
