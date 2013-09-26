@@ -121,11 +121,11 @@ dbx_direction(D) ->
 
 
 write_dbx(Db) ->
-    gpio:clr_mask(0, ?DB_MASK),
-    gpio:set_mask(0, byte_to_db(Db)).
+    gpio:clr_mask(?DB_MASK),
+    gpio:set_mask(byte_to_db(Db)).
 
 read_dbx() ->
-    db_to_byte(gpio:get_mask(0)).
+    db_to_byte(gpio:get_mask(?DB_MASK)).
 
 status() ->
     gpio:set_direction(?DB6_PIN, in),
