@@ -38,8 +38,8 @@ get_pixel(X, Y) ->
     Addr = ?pixel_addr(X,Y),
     ra8835:set_cursor(Addr),
     [Data] = ra8835:mread(1),
-    Bit = (1 bsl (7 - (X band 16#7))),
-    (Data band Bit) =/= 0.
+    Pos = (7 - (X band 16#7)),
+    (Data bsr Pos) band 1.
 
 set_pixel(X, Y, Color) ->
     Addr = ?pixel_addr(X,Y),
@@ -73,7 +73,7 @@ write_char(Char) ->
     ra8835:mfill(Char, 1).
 
 write_string(String) ->
-    list:foreach(fun write_char/1, String).
+    foreach(fun write_char/1, String).
 
 on() ->
     ra8835:display_on(0).
