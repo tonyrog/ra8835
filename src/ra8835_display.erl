@@ -7,7 +7,7 @@
 
 -module(ra8835_display).
 
--include("ra8835.hrl").
+-include("../include/ra8835_cfg.hrl").
 
 -define(base_addr,      ?PARAM_GRAPHICSTART).
 -define(pixel_addr(X,Y), (?base_addr+((?DISPLAY_WIDTH bsr 3)*(Y))+
