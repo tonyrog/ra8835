@@ -32,6 +32,8 @@
 -export([make_byte_to_db/0]).
 -export([byte_to_db/1]).
 -export([db_to_byte/1]).
+%% debug
+-export([dbx_direction/1, write_dbx/1, read_dbx/0]).
 
 -import(lists, [foreach/2]).
 
@@ -221,7 +223,6 @@ init() ->
     gpio:set_direction(?LCD_WR_PIN,  high),
     gpio:set_direction(?LCD_A0_PIN,  high),
     gpio:set_direction(?LCD_CS_PIN,  high),
-
     gpio:set_direction(?LCD_RST_PIN, high),
 
     %% Reset the 8835
