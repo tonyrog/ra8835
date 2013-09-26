@@ -150,7 +150,6 @@ set_8080_mode() ->
 -endif.
 
 init() ->
-    application:start(gpio),
     gpio:init(?LCD_A0_PIN),
     gpio:init(?LCD_WR_PIN),
     gpio:init(?LCD_RD_PIN),

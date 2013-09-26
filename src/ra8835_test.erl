@@ -14,6 +14,9 @@ run() ->
     loop(10000).
 
 init() ->
+    %% application:start(gpio),
+    gpio_sup:start_link([{linked,false},{chipset,bcm2835}]),
+
     ra8835_display:init(),
     ra8835_display:create().
 
