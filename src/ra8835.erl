@@ -81,7 +81,8 @@ write_dbx(Db) ->
     gpio:set_mask(byte_to_db(Db)).
 
 read_dbx() ->
-    db_to_byte(gpio:get_mask(?DB_MASK)).
+    {ok,Db} = gpio:get_mask(?DB_MASK),
+    db_to_byte(Db).
 
 status() ->
     gpio:set_direction(?DB6_PIN, in),
